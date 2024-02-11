@@ -2,21 +2,59 @@ package cmd
 
 import (
 	"bytes"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/sha256"
+	"encoding/base64"
 	"encoding/gob"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os/user"
 
 	"github.com/cockroachdb/pebble"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/nacl/secretbox"
+	"golang.org/x/crypto/ssh"
 )
 
 // JSONValue => Struct to represent as a JSON object
 type JSONValue struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
+}
+
+// DecryptWithPrivateKey => Decrypts the blob of password data with the private key first
+func DecryptWithPrivateKey(privPath string, wrappedData []byte) ([]byte, error) {
+	//read private key
+	priv, err := ioutil.ReadFile(privPath)
+	if err != nil {
+		return nil, err
+	}
+
+	privKey, err := ssh.ParseRawPrivateKey(priv)
+
+	if err != nil {
+		return nil, err
+	}
+
+	//get raw encrypted payload
+	data, err := base64.StdEncoding.DecodeString(string(wrappedData))
+	if err != nil {
+		return nil, err
+	}
+
+	//parse the OpenSSH key as an RSA Private Key
+	parsedKey := privKey.(*rsa.PrivateKey)
+	decryptBytes, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, parsedKey, data, nil)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return decryptBytes, nil
+
 }
 
 func DecryptBox(gobText bytes.Buffer) ([]byte, error) {
