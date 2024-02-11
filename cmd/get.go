@@ -1,81 +1,22 @@
-/*
-Copyright © 2020 Abhay Bhargav
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in
-all copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-THE SOFTWARE.
-*/
 package cmd
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/sha256"
-	"encoding/base64"
 	"encoding/gob"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"os/user"
 
 	"github.com/cockroachdb/pebble"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/nacl/secretbox"
-	"golang.org/x/crypto/ssh"
 )
 
 // JSONValue => Struct to represent as a JSON object
 type JSONValue struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
-}
-
-// DecryptWithPrivateKey => Decrypts the blob of password data with the private key first
-func DecryptWithPrivateKey(privPath string, wrappedData []byte) ([]byte, error) {
-	//read private key
-	priv, err := ioutil.ReadFile(privPath)
-	if err != nil {
-		return nil, err
-	}
-
-	privKey, err := ssh.ParseRawPrivateKey(priv)
-
-	if err != nil {
-		return nil, err
-	}
-
-	//get raw encrypted payload
-	data, err := base64.StdEncoding.DecodeString(string(wrappedData))
-	if err != nil {
-		return nil, err
-	}
-
-	//parse the OpenSSH key as an RSA Private Key
-	parsedKey := privKey.(*rsa.PrivateKey)
-	decryptBytes, err := rsa.DecryptOAEP(sha256.New(), rand.Reader, parsedKey, data, nil)
-
-	if err != nil {
-		return nil, err
-	}
-
-	return decryptBytes, nil
-
 }
 
 func DecryptBox(gobText bytes.Buffer) ([]byte, error) {
